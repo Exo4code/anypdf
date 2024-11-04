@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Konvertiere deine Dateien kostenlos und sicher in PDF - Unterstützt JPG, PNG, SVG und HTML">
+    <meta name="theme-color" content="#0071e3">
+    <title>ANYPDF - Konvertiere jede Datei in PDF</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="frontend/src/App.css">
+    <link rel="preconnect" href="https://cdn-uicons.flaticon.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script>
+
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+    <link rel="manifest" href="/favicon/site.webmanifest">
+    <link rel="mask-icon" href="/favicon/safari-pinned-tab.svg" color="#0071e3">
+    <link rel="shortcut icon" href="/favicon/favicon.ico">
+    <meta name="msapplication-TileColor" content="#0071e3">
+    <meta name="msapplication-config" content="/favicon/browserconfig.xml">
+    <meta name="theme-color" content="#ffffff">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-container">
+                <img src="/favicon/favicon-32x32.png" alt="ANYPDF Logo" width="32" height="32">
+                <h1>ANYPDF</h1>
+            </div>
+            <nav class="main-nav">
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero-section">
+            <h2>Konvertiere deine Dateien in PDF</h2>
+            <p class="subtitle">Schnell. Einfach. Sicher.</p>
+        </section>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Dateien hier ablegen oder klicken zum Auswählen">
+            <div class="upload-icon-container">
+                <i class="fi fi-rr-cloud-upload-alt" aria-hidden="true"></i>
+            </div>
+            <h3>Dateien hier ablegen</h3>
+            <p class="drop-text">oder</p>
+            <button class="convert-button">
+                <i class="fi fi-rr-folder-upload" aria-hidden="true"></i>
+                Dateien auswählen
+            </button>
+            <p class="file-info">Unterstützt: JPG, PNG, SVG, HTML</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <i class="fi fi-rr-shield-check" aria-hidden="true"></i>
+                <h4>Sicher</h4>
+                <p>Verschlüsselte Übertragung</p>
+            </div>
+            <div class="feature-card">
+                <i class="fi fi-rr-rocket" aria-hidden="true"></i>
+                <h4>Schnell</h4>
+                <p>Blitzschnelle Konvertierung</p>
+            </div>
+            <div class="feature-card">
+                <i class="fi fi-rr-cloud-check" aria-hidden="true"></i>
+                <h4>Kostenlos</h4>
+                <p>Keine Registrierung nötig</p>
+            </div>
+        </div>
+
+        <div class="file-preview" style="display: none;">
+            <div class="preview-content">
+                <!-- Wird dynamisch mit JS gefüllt -->
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script type="module" src="js/utils/sounds.js"></script>
+    <script type="module" src="js/converters/ImageConverter.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
