@@ -77,7 +77,6 @@ import { SvgConverter } from './converters/SvgConverter.js';
 
         try {
             if (isMobile) {
-                mobileQueue = [];
                 const mobileContainer = getMobileFilesContainer();
                 
                 for (const chunk of chunks) {
@@ -203,7 +202,6 @@ import { SvgConverter } from './converters/SvgConverter.js';
             link.click();
         } finally {
             document.body.removeChild(container);
-            URL.revokeObjectURL(item.url);
         }
     }
 
