@@ -24,6 +24,7 @@
     justify-content: center;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
+    pointer-events: none;
 }
 
 .refresh-indicator i {
@@ -92,5 +93,12 @@
     
     .notification {
         bottom: env(safe-area-inset-bottom, 20px);
+    }
+}
+
+/* Verstecke den Custom Indicator wenn Browser-Refresh aktiv ist */
+@supports (-webkit-overflow-scrolling: touch) {
+    .refresh-indicator {
+        display: none;
     }
 }
