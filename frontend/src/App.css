@@ -10,3 +10,87 @@
         display: block;
     }
 }
+
+/* Pull-to-Refresh Styles */
+.refresh-indicator {
+    position: fixed;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+}
+
+.refresh-indicator i {
+    color: var(--text-secondary);
+    font-size: 18px;
+    opacity: 0.8;
+    transform-origin: center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.refresh-indicator.refreshing {
+    transform: translateX(-50%) translateY(16px);
+}
+
+.refresh-indicator.refreshing i {
+    color: var(--accent-color);
+    animation: gentle-spin 1s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes gentle-spin {
+    0% {
+        transform: rotate(0deg);
+        opacity: 0.8;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        transform: rotate(360deg);
+        opacity: 0.8;
+    }
+}
+
+/* Dark Mode Anpassungen */
+@media (prefers-color-scheme: dark) {
+    .refresh-indicator i {
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .refresh-indicator.refreshing i {
+        color: var(--accent-color);
+    }
+}
+
+/* Standalone App Styles */
+.standalone-app .header {
+    padding-top: env(safe-area-inset-top);
+}
+
+.standalone-app .container {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Browser-spezifische Anpassungen */
+.chrome-ios .header,
+.firefox-ios .header,
+.edge-ios .header {
+    padding-top: 20px;
+}
+
+/* Verbesserte Mobile Styles */
+@media (max-width: 768px) {
+    .mobile-files-container {
+        margin-bottom: env(safe-area-inset-bottom, 20px);
+    }
+    
+    .notification {
+        bottom: env(safe-area-inset-bottom, 20px);
+    }
+}

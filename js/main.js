@@ -14,7 +14,11 @@ import { SvgConverter } from './converters/SvgConverter.js';
     let mobileQueue = [];
     let convertersRef;
 
-    document.addEventListener('DOMContentLoaded', initializeApp);
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeApp();
+        setupPullToRefresh();
+        setupMobileBrowserHandling();
+    });
 
     function initializeApp() {
         const { jsPDF } = window.jspdf;
@@ -271,5 +275,94 @@ import { SvgConverter } from './converters/SvgConverter.js';
                 await handleFiles(files, converters);
             }
         });
+    }
+
+    // Neue Funktion für Pull-to-Refresh
+    function setupPullToRefresh() {
+        let touchStart = 0;
+        let touchY = 0;
+        const threshold = 150;
+        const refreshIndicator = document.createElement('div');
+        refreshIndicator.className = 'refresh-indicator';
+        refreshIndicator.innerHTML = '<i class="fi fi-rr-refresh"></i>';
+        document.body.appendChild(refreshIndicator);
+
+        document.addEventListener('touchstart', e => {
+            touchStart = e.touches[0].pageY;
+            touchY = touchStart;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', e => {
+            touchY = e.touches[0].pageY;
+            const distance = touchY - touchStart;
+            
+            if (window.scrollY === 0 && distance > 0 && distance < threshold) {
+                refreshIndicator.style.transform = `translateY(${distance}px) rotate(${distance * 2}deg)`;
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', async () => {
+            const distance = touchY - touchStart;
+            
+            if (window.scrollY === 0 && distance > threshold) {
+                refreshIndicator.classList.add('refreshing');
+                await reloadPage();
+            }
+            
+            refreshIndicator.style.transform = 'translateY(-100%)';
+            setTimeout(() => refreshIndicator.classList.remove('refreshing'), 300);
+        });
+    }
+
+    // Neue Funktion für das Neuladen der Seite
+    async function reloadPage() {
+        try {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Animation Zeit
+            window.location.reload();
+        } catch (error) {
+            console.error('Fehler beim Neuladen:', error);
+        }
+    }
+
+    // Neue Funktion für Browser/App-spezifische Anpassungen
+    function setupMobileBrowserHandling() {
+        const ua = navigator.userAgent;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
+        
+        if (!isMobile) return;
+
+        // Meta-Tags für verschiedene Browser/Apps
+        const metaTags = [
+            { name: 'apple-mobile-web-app-capable', content: 'yes' },
+            { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+            { name: 'format-detection', content: 'telephone=no' },
+            { name: 'mobile-web-app-capable', content: 'yes' },
+            { name: 'theme-color', content: '#ffffff' }
+        ];
+
+        metaTags.forEach(tag => {
+            const meta = document.createElement('meta');
+            meta.name = tag.name;
+            meta.content = tag.content;
+            document.head.appendChild(meta);
+        });
+
+        // Standalone App Erkennung
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            document.body.classList.add('standalone-app');
+        }
+
+        // Browser-spezifische Anpassungen
+        if (/CriOS/i.test(ua)) {
+            // Chrome auf iOS
+            document.body.classList.add('chrome-ios');
+        } else if (/FxiOS/i.test(ua)) {
+            // Firefox auf iOS
+            document.body.classList.add('firefox-ios');
+        } else if (/EdgiOS/i.test(ua)) {
+            // Edge auf iOS
+            document.body.classList.add('edge-ios');
+        }
     }
 })();
