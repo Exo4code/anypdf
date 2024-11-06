@@ -10,6 +10,9 @@ import { SvgConverter } from './converters/SvgConverter.js';
     };
 
     const MAX_PARALLEL_CONVERSIONS = 3;
+    const MAX_FILES = 10;
+    let mobileQueue = [];
+    let convertersRef;
 
     document.addEventListener('DOMContentLoaded', initializeApp);
 
@@ -55,15 +58,37 @@ import { SvgConverter } from './converters/SvgConverter.js';
 
     async function handleFiles(files, converters) {
         if (!files?.length) return;
-
+        
         const fileArray = Array.from(files);
+        if (fileArray.length > MAX_FILES) {
+            showNotification(`Maximal ${MAX_FILES} Dateien erlaubt`, 'error');
+            return;
+        }
+
         const chunks = chunkArray(fileArray, MAX_PARALLEL_CONVERSIONS);
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        convertersRef = converters;
 
         showProgress(true);
 
         try {
-            for (const chunk of chunks) {
-                await Promise.all(chunk.map(file => processFile(file, converters)));
+            if (isMobile) {
+                mobileQueue = [];
+                const mobileContainer = getMobileFilesContainer();
+                
+                for (const chunk of chunks) {
+                    const results = await Promise.all(chunk.map(async file => {
+                        const result = await convertFile(file, converters);
+                        return { file, ...result };
+                    }));
+                    mobileQueue.push(...results);
+                }
+                
+                updateMobileFilesList(mobileContainer);
+            } else {
+                for (const chunk of chunks) {
+                    await Promise.all(chunk.map(file => processFile(file, converters)));
+                }
             }
         } catch (error) {
             console.error('Fehler bei der Dateiverarbeitung:', error);
@@ -73,7 +98,7 @@ import { SvgConverter } from './converters/SvgConverter.js';
         }
     }
 
-    async function processFile(file, converters) {
+    async function convertFile(file, converters) {
         const extension = file.name.split('.').pop().toLowerCase();
         let converter;
         
@@ -82,40 +107,75 @@ import { SvgConverter } from './converters/SvgConverter.js';
         else if (SUPPORTED_FORMATS.vector.includes(extension)) converter = converters.svg;
         else throw new Error(`Nicht unterstütztes Dateiformat: ${extension}`);
 
-        try {
-            const pdf = await converter.convertToPdf(file);
-            const fileName = file.name.replace(/\.[^/.]+$/,"");
-            
-            const blob = pdf.output('blob');
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${fileName}_converted.pdf`;
-            link.style.display = 'none';
-            document.body.appendChild(link);
+        const pdf = await converter.convertToPdf(file);
+        const blob = pdf.output('blob');
+        const url = URL.createObjectURL(blob);
+        
+        return { 
+            fileName: file.name.replace(/\.[^/.]+$/,""),
+            url,
+            originalName: file.name 
+        };
+    }
 
-            if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                await new Promise(resolve => {
-                    link.click();
-                    setTimeout(() => {
-                        document.body.removeChild(link);
-                        URL.revokeObjectURL(url);
-                        resolve();
-                    }, 1000);
-                });
-            } else {
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                showNotification('Konvertierung erfolgreich!', 'success');
-            }
-        } catch (error) {
-            if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                showNotification(`Fehler bei ${file.name}: ${error.message}`, 'error');
-            }
-            console.error('Konvertierungsfehler:', error);
+    function getMobileFilesContainer() {
+        let container = document.querySelector('.mobile-files-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'mobile-files-container';
+            container.style.cssText = 'margin-top: 20px; padding: 15px; background: var(--secondary-bg); border-radius: var(--border-radius);';
+            
+            const downloadAllBtn = document.createElement('button');
+            downloadAllBtn.className = 'convert-button';
+            downloadAllBtn.innerHTML = '<i class="fi fi-rr-download"></i> Alle herunterladen';
+            downloadAllBtn.style.marginTop = '15px';
+            downloadAllBtn.onclick = downloadAllFiles;
+            
+            container.appendChild(downloadAllBtn);
+            document.getElementById('dropZone').after(container);
         }
+        return container;
+    }
+
+    function updateMobileFilesList(container) {
+        const oldList = container.querySelector('.mobile-files-list');
+        if (oldList) oldList.remove();
+
+        const list = document.createElement('div');
+        list.className = 'mobile-files-list';
+        list.style.cssText = 'margin-top: 15px;';
+
+        mobileQueue.forEach((item, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.1);';
+            fileItem.innerHTML = `
+                <span>${item.originalName}</span>
+                <button class="download-btn" style="background: none; border: none; color: var(--accent-color); cursor: pointer;">
+                    <i class="fi fi-rr-download"></i>
+                </button>
+            `;
+
+            fileItem.querySelector('.download-btn').onclick = () => downloadFile(item);
+            list.appendChild(fileItem);
+        });
+
+        container.insertBefore(list, container.querySelector('.convert-button'));
+    }
+
+    async function downloadAllFiles() {
+        for (const item of mobileQueue) {
+            await downloadFile(item);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
+    async function downloadFile(item) {
+        const link = document.createElement('a');
+        link.href = item.url;
+        link.download = `${item.fileName}_converted.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     function createFileInput(converters) {
