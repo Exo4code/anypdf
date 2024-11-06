@@ -156,14 +156,6 @@ import { SvgConverter } from './converters/SvgConverter.js';
             container = document.createElement('div');
             container.className = 'mobile-files-container';
             container.style.cssText = 'margin-top: 20px; padding: 15px; background: var(--secondary-bg); border-radius: var(--border-radius);';
-            
-            const downloadAllBtn = document.createElement('button');
-            downloadAllBtn.className = 'convert-button';
-            downloadAllBtn.innerHTML = '<i class="fi fi-rr-download"></i> Alle herunterladen';
-            downloadAllBtn.style.marginTop = '15px';
-            downloadAllBtn.onclick = downloadAllFiles;
-            
-            container.appendChild(downloadAllBtn);
             document.getElementById('dropZone').after(container);
         }
         return container;
@@ -191,60 +183,10 @@ import { SvgConverter } from './converters/SvgConverter.js';
             list.appendChild(fileItem);
         });
 
-        container.insertBefore(list, container.querySelector('.convert-button'));
-    }
-
-    async function downloadAllFiles() {
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        
-        if (isSafari) {
-            // Safari: Einzelne Downloads nacheinander
-            for (const item of mobileQueue) {
-                await downloadFile(item);
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            return;
-        }
-
-        // Für andere mobile Browser: Batch-Download
-        const container = document.createElement('div');
-        container.style.display = 'none';
-        document.body.appendChild(container);
-
-        try {
-            // Alle Links auf einmal erstellen und hinzufügen
-            const links = mobileQueue.map(item => {
-                const link = document.createElement('a');
-                link.href = item.url;
-                link.download = `${item.fileName}_converted.pdf`;
-                // Wichtige Attribute für Batch-Download
-                link.setAttribute('rel', 'noopener');
-                link.setAttribute('data-downloadurl', `application/pdf:${item.fileName}_converted.pdf:${item.url}`);
-                container.appendChild(link);
-                return link;
-            });
-
-            // Alle Links gleichzeitig aktivieren
-            const clickPromises = links.map(link => {
-                return new Promise(resolve => {
-                    link.addEventListener('click', resolve, { once: true });
-                    // Verzögerung zwischen den Click-Events
-                    setTimeout(() => link.click(), 50);
-                });
-            });
-
-            // Warte auf alle Click-Events
-            await Promise.all(clickPromises);
-
-        } finally {
-            // Aufräumen
-            document.body.removeChild(container);
-            mobileQueue.forEach(item => URL.revokeObjectURL(item.url));
-        }
+        container.appendChild(list);
     }
 
     async function downloadFile(item) {
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         const container = document.createElement('div');
         container.style.display = 'none';
         document.body.appendChild(container);
@@ -253,20 +195,8 @@ import { SvgConverter } from './converters/SvgConverter.js';
             const link = document.createElement('a');
             link.href = item.url;
             link.download = `${item.fileName}_converted.pdf`;
-            
-            if (!isSafari) {
-                // Zusätzliche Attribute für nicht-Safari Browser
-                link.setAttribute('rel', 'noopener');
-                link.setAttribute('data-downloadurl', `application/pdf:${item.fileName}_converted.pdf:${item.url}`);
-            }
-            
             container.appendChild(link);
             link.click();
-            
-            // Kurze Verzögerung für Safari
-            if (isSafari) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
         } finally {
             document.body.removeChild(container);
             URL.revokeObjectURL(item.url);
