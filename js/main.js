@@ -2,57 +2,6 @@ import { ImageConverter } from './converters/ImageConverter.js';
 import { HtmlConverter } from './converters/HtmlConverter.js';
 import { SvgConverter } from './converters/SvgConverter.js';
 
-const mobileDownloadQueue = {
-    items: [],
-    isProcessing: false,
-    
-    add(item) {
-        this.items.push(item);
-        if (!this.isProcessing) {
-            this.processNext();
-        }
-    },
-    
-    async processNext() {
-        if (this.items.length === 0) {
-            this.isProcessing = false;
-            return;
-        }
-        
-        this.isProcessing = true;
-        const nextItem = this.items[0];
-        
-        try {
-            await this.processDownload(nextItem);
-        } catch (error) {
-            console.error('Download-Fehler:', error);
-        }
-        
-        // Warte 1.5 Sekunden nach jedem Download
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        this.items.shift(); // Entferne verarbeitetes Item
-        this.processNext(); // Verarbeite nächstes Item
-    },
-    
-    async processDownload({ pdf, fileName }) {
-        const blob = pdf.output('blob');
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${fileName}_converted.pdf`;
-        link.style.display = 'none';
-        link.target = '_self';
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        URL.revokeObjectURL(url);
-    }
-};
-
 (() => {
     const SUPPORTED_FORMATS = {
         images: ['jpg', 'jpeg', 'png'],
@@ -100,6 +49,8 @@ const mobileDownloadQueue = {
 
         dropZone.addEventListener('drop', e => handleFiles(e.dataTransfer.files, converters));
         convertButton.addEventListener('click', () => createFileInput(converters));
+
+        setupDownloadTriggers(dropZone);
     }
 
     async function handleFiles(files, converters) {
@@ -135,17 +86,28 @@ const mobileDownloadQueue = {
             const pdf = await converter.convertToPdf(file);
             const fileName = file.name.replace(/\.[^/.]+$/,"");
             
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const blob = pdf.output('blob');
+            const url = URL.createObjectURL(blob);
             
-            if (isMobile) {
-                // Füge Download zur Queue hinzu
-                mobileDownloadQueue.add({
-                    pdf,
-                    fileName
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${fileName}_converted.pdf`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+
+            if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                await new Promise(resolve => {
+                    link.click();
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                        resolve();
+                    }, 1000);
                 });
             } else {
-                // Für Desktop: Normal speichern mit Notification
-                await pdf.save(`${fileName}_converted.pdf`);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
                 showNotification('Konvertierung erfolgreich!', 'success');
             }
         } catch (error) {
@@ -206,5 +168,23 @@ const mobileDownloadQueue = {
             chunks.push(array.slice(i, i + size));
         }
         return chunks;
+    }
+
+    function setupDownloadTriggers(dropZone) {
+        document.addEventListener('paste', async (e) => {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            const files = [];
+            
+            for (const item of items) {
+                if (item.kind === 'file') {
+                    files.push(item.getAsFile());
+                }
+            }
+            
+            if (files.length > 0) {
+                e.preventDefault();
+                await handleFiles(files, converters);
+            }
+        });
     }
 })();
