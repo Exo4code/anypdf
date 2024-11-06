@@ -86,8 +86,40 @@ import { SvgConverter } from './converters/SvgConverter.js';
                 
                 updateMobileFilesList(mobileContainer);
             } else {
-                for (const chunk of chunks) {
-                    await Promise.all(chunk.map(file => processFile(file, converters)));
+                const container = document.createElement('div');
+                container.style.display = 'none';
+                document.body.appendChild(container);
+
+                try {
+                    for (const chunk of chunks) {
+                        const results = await Promise.all(chunk.map(async file => {
+                            const result = await convertFile(file, converters);
+                            return result;
+                        }));
+
+                        const links = results.map(item => {
+                            const link = document.createElement('a');
+                            link.href = item.url;
+                            link.download = `${item.fileName}_converted.pdf`;
+                            container.appendChild(link);
+                            return { link, url: item.url };
+                        });
+
+                        if (links.length > 0) {
+                            links[0].link.click();
+                            await new Promise(resolve => setTimeout(resolve, 500));
+
+                            for (let i = 1; i < links.length; i++) {
+                                links[i].link.click();
+                                await new Promise(resolve => setTimeout(resolve, 200));
+                            }
+
+                            links.forEach(({ url }) => URL.revokeObjectURL(url));
+                        }
+                    }
+                    showNotification('Konvertierung erfolgreich!', 'success');
+                } finally {
+                    document.body.removeChild(container);
                 }
             }
         } catch (error) {
@@ -163,34 +195,56 @@ import { SvgConverter } from './converters/SvgConverter.js';
     }
 
     async function downloadAllFiles() {
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        
+        if (isSafari) {
+            // Safari: Einzelne Downloads nacheinander
+            for (const item of mobileQueue) {
+                await downloadFile(item);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            return;
+        }
+
+        // Für andere mobile Browser: Batch-Download
         const container = document.createElement('div');
         container.style.display = 'none';
         document.body.appendChild(container);
 
         try {
+            // Alle Links auf einmal erstellen und hinzufügen
             const links = mobileQueue.map(item => {
                 const link = document.createElement('a');
                 link.href = item.url;
                 link.download = `${item.fileName}_converted.pdf`;
+                // Wichtige Attribute für Batch-Download
+                link.setAttribute('rel', 'noopener');
+                link.setAttribute('data-downloadurl', `application/pdf:${item.fileName}_converted.pdf:${item.url}`);
                 container.appendChild(link);
                 return link;
             });
 
-            links[0].click();
+            // Alle Links gleichzeitig aktivieren
+            const clickPromises = links.map(link => {
+                return new Promise(resolve => {
+                    link.addEventListener('click', resolve, { once: true });
+                    // Verzögerung zwischen den Click-Events
+                    setTimeout(() => link.click(), 50);
+                });
+            });
 
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            for (let i = 1; i < links.length; i++) {
-                links[i].click();
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
+            // Warte auf alle Click-Events
+            await Promise.all(clickPromises);
+
         } finally {
+            // Aufräumen
             document.body.removeChild(container);
             mobileQueue.forEach(item => URL.revokeObjectURL(item.url));
         }
     }
 
     async function downloadFile(item) {
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         const container = document.createElement('div');
         container.style.display = 'none';
         document.body.appendChild(container);
@@ -199,8 +253,20 @@ import { SvgConverter } from './converters/SvgConverter.js';
             const link = document.createElement('a');
             link.href = item.url;
             link.download = `${item.fileName}_converted.pdf`;
+            
+            if (!isSafari) {
+                // Zusätzliche Attribute für nicht-Safari Browser
+                link.setAttribute('rel', 'noopener');
+                link.setAttribute('data-downloadurl', `application/pdf:${item.fileName}_converted.pdf:${item.url}`);
+            }
+            
             container.appendChild(link);
             link.click();
+            
+            // Kurze Verzögerung für Safari
+            if (isSafari) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
         } finally {
             document.body.removeChild(container);
             URL.revokeObjectURL(item.url);
