@@ -279,40 +279,43 @@ import { SvgConverter } from './converters/SvgConverter.js';
 
     // Neue Funktion für Pull-to-Refresh
     function setupPullToRefresh() {
-        let touchStart = 0;
-        let touchY = 0;
-        const threshold = 150;
-        const refreshIndicator = document.createElement('div');
-        refreshIndicator.className = 'refresh-indicator';
-        refreshIndicator.innerHTML = '<i class="fi fi-rr-refresh"></i>';
-        document.body.appendChild(refreshIndicator);
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (!isMobile) return;
 
-        document.addEventListener('touchstart', e => {
-            touchStart = e.touches[0].pageY;
-            touchY = touchStart;
+        // Aktiviere natives Pull-to-Refresh nur für den Header-Bereich
+        const header = document.querySelector('.header');
+        if (!header) return;
+
+        // Setze CSS-Eigenschaften für Pull-to-Refresh
+        document.documentElement.style.overscrollBehavior = 'auto';
+        header.style.overscrollBehavior = 'contain';
+
+        // Beobachte Header-Position
+        let startY = 0;
+        let isPulling = false;
+
+        header.addEventListener('touchstart', e => {
+            startY = e.touches[0].pageY;
+            isPulling = true;
         }, { passive: true });
 
-        document.addEventListener('touchmove', e => {
-            touchY = e.touches[0].pageY;
-            const distance = touchY - touchStart;
+        header.addEventListener('touchmove', e => {
+            if (!isPulling) return;
             
-            if (window.scrollY === 0 && distance > 0 && distance < threshold) {
-                refreshIndicator.style.transform = `translateY(${distance}px) rotate(${distance * 2}deg)`;
-                e.preventDefault();
+            const pullDistance = e.touches[0].pageY - startY;
+            if (pullDistance > 0 && window.scrollY <= 0) {
+                // Erlaube natives Pull-to-Refresh
+                document.documentElement.style.overscrollBehavior = 'auto';
             }
-        }, { passive: false });
+        }, { passive: true });
 
-        document.addEventListener('touchend', async () => {
-            const distance = touchY - touchStart;
-            
-            if (window.scrollY === 0 && distance > threshold) {
-                refreshIndicator.classList.add('refreshing');
-                await reloadPage();
-            }
-            
-            refreshIndicator.style.transform = 'translateY(-100%)';
-            setTimeout(() => refreshIndicator.classList.remove('refreshing'), 300);
-        });
+        header.addEventListener('touchend', () => {
+            isPulling = false;
+            // Setze overscroll-behavior zurück
+            setTimeout(() => {
+                document.documentElement.style.overscrollBehavior = 'contain';
+            }, 100);
+        }, { passive: true });
     }
 
     // Neue Funktion für das Neuladen der Seite
