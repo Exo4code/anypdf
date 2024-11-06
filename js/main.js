@@ -163,19 +163,48 @@ import { SvgConverter } from './converters/SvgConverter.js';
     }
 
     async function downloadAllFiles() {
-        for (const item of mobileQueue) {
-            await downloadFile(item);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        const container = document.createElement('div');
+        container.style.display = 'none';
+        document.body.appendChild(container);
+
+        try {
+            const links = mobileQueue.map(item => {
+                const link = document.createElement('a');
+                link.href = item.url;
+                link.download = `${item.fileName}_converted.pdf`;
+                container.appendChild(link);
+                return link;
+            });
+
+            links[0].click();
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            for (let i = 1; i < links.length; i++) {
+                links[i].click();
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        } finally {
+            document.body.removeChild(container);
+            mobileQueue.forEach(item => URL.revokeObjectURL(item.url));
         }
     }
 
     async function downloadFile(item) {
-        const link = document.createElement('a');
-        link.href = item.url;
-        link.download = `${item.fileName}_converted.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const container = document.createElement('div');
+        container.style.display = 'none';
+        document.body.appendChild(container);
+
+        try {
+            const link = document.createElement('a');
+            link.href = item.url;
+            link.download = `${item.fileName}_converted.pdf`;
+            container.appendChild(link);
+            link.click();
+        } finally {
+            document.body.removeChild(container);
+            URL.revokeObjectURL(item.url);
+        }
     }
 
     function createFileInput(converters) {
