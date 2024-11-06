@@ -282,21 +282,31 @@ import { SvgConverter } from './converters/SvgConverter.js';
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (!isMobile) return;
 
-        // Aktiviere natives Pull-to-Refresh nur für den Header-Bereich
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                            (window.navigator.standalone || false);
+
         const header = document.querySelector('.header');
         if (!header) return;
 
-        // Setze CSS-Eigenschaften für Pull-to-Refresh
+        // Für Standalone Apps und mobile Browser
+        if (isStandalone) {
+            // Füge den nativen Pull-to-Refresh Container hinzu
+            const pullIndicator = document.createElement('div');
+            pullIndicator.className = 'pull-to-refresh-indicator';
+            header.prepend(pullIndicator);
+        }
+
         document.documentElement.style.overscrollBehavior = 'auto';
         header.style.overscrollBehavior = 'contain';
 
-        // Beobachte Header-Position
         let startY = 0;
         let isPulling = false;
 
         header.addEventListener('touchstart', e => {
-            startY = e.touches[0].pageY;
-            isPulling = true;
+            if (window.scrollY <= 0) {
+                startY = e.touches[0].pageY;
+                isPulling = true;
+            }
         }, { passive: true });
 
         header.addEventListener('touchmove', e => {
@@ -304,17 +314,29 @@ import { SvgConverter } from './converters/SvgConverter.js';
             
             const pullDistance = e.touches[0].pageY - startY;
             if (pullDistance > 0 && window.scrollY <= 0) {
-                // Erlaube natives Pull-to-Refresh
                 document.documentElement.style.overscrollBehavior = 'auto';
+                if (isStandalone) {
+                    const indicator = document.querySelector('.pull-to-refresh-indicator');
+                    if (indicator) {
+                        indicator.classList.add('visible');
+                    }
+                }
             }
         }, { passive: true });
 
         header.addEventListener('touchend', () => {
+            if (isPulling && window.scrollY <= 0) {
+                const indicator = document.querySelector('.pull-to-refresh-indicator');
+                if (indicator) {
+                    indicator.classList.add('refreshing');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                } else {
+                    window.location.reload();
+                }
+            }
             isPulling = false;
-            // Setze overscroll-behavior zurück
-            setTimeout(() => {
-                document.documentElement.style.overscrollBehavior = 'contain';
-            }, 100);
         }, { passive: true });
     }
 
