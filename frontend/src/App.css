@@ -60,3 +60,51 @@
         bottom: env(safe-area-inset-bottom, 20px);
     }
 }
+
+/* Füge diese Styles für den Pull-to-Refresh Indicator hinzu */
+
+.pull-to-refresh-indicator {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.pull-to-refresh-indicator::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.pull-to-refresh-indicator.visible::after {
+    opacity: 1;
+}
+
+.pull-to-refresh-indicator.refreshing::after {
+    animation: rotate 0.8s infinite linear;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Dark Mode Anpassung */
+@media (prefers-color-scheme: dark) {
+    .pull-to-refresh-indicator::after {
+        border-color: rgba(255,255,255,0.2);
+        border-top-color: var(--accent-color);
+    }
+}

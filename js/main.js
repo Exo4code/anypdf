@@ -178,8 +178,8 @@ import { SvgConverter } from './converters/SvgConverter.js';
             fileItem.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.1);';
             fileItem.innerHTML = `
                 <span>${item.originalName}</span>
-                <button class="download-btn" style="background: none; border: none; color: var(--accent-color); cursor: pointer;">
-                    <i class="fi fi-rr-download"></i>
+                <button class="download-btn" style="background: none; border: none; color: var(--accent-color); cursor: pointer; padding: 12px;">
+                    <i class="fi fi-rr-download" style="font-size: 20px;"></i>
                 </button>
             `;
 
